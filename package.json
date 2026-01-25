@@ -1,0 +1,48 @@
+{
+  "name": "tasking-hex-editor",
+  "displayName": "TASKING HEX Editor",
+  "description": "Intel HEX viewer/editor with T32-style dump view for TASKING/Infineon",
+  "publisher": "IH02",
+  "version": "0.1.0",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Visualization"
+  ],
+  "activationEvents": [
+    "onCustomEditor:taskingHex.dumpEditor"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [],
+    "customEditors": [
+      {
+        "viewType": "taskingHex.dumpEditor",
+        "displayName": "TASKING HEX Dump",
+        "priority": "default",
+        "selector": [
+          { "filenamePattern": "*.hex" },
+          { "filenamePattern": "*.ihex" },
+          { "filenamePattern": "*.ihx" }
+        ]
+      }
+    ],
+    "menus": {}
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint src --ext ts"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.80.0",
+    "@types/node": "20.x",
+    "@typescript-eslint/eslint-plugin": "^6.4.1",
+    "@typescript-eslint/parser": "^6.4.1",
+    "eslint": "^8.47.0",
+    "typescript": "^5.1.6"
+  }
+}
