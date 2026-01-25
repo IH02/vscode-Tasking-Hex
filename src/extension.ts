@@ -1,39 +1,10 @@
 import * as vscode from 'vscode';
 
-type HexRegion = {
-  id: string;
-  label: string;
-  start: number;
-  end: number;
-};
-
 type DumpRow = {
   address: number;
   words: string[];
   ascii: string;
 };
-
-const commonHexRegions: HexRegion[] = [
-  { id: 'DSPR0', label: 'DSPR0 (CPU0)', start: 0x70000000, end: 0x7003BFFF },
-  { id: 'PSPR0', label: 'PSPR0 (CPU0)', start: 0x70100000, end: 0x7010FFFF },
-  { id: 'DSPR1', label: 'DSPR1 (CPU1)', start: 0x60000000, end: 0x6003BFFF },
-  { id: 'PSPR1', label: 'PSPR1 (CPU1)', start: 0x60100000, end: 0x6010FFFF },
-  { id: 'DSPR2', label: 'DSPR2 (CPU2)', start: 0x50000000, end: 0x50017FFF },
-  { id: 'PSPR2', label: 'PSPR2 (CPU2)', start: 0x50100000, end: 0x5010FFFF },
-  { id: 'DSPR3', label: 'DSPR3 (CPU3)', start: 0x40000000, end: 0x40017FFF },
-  { id: 'PSPR3', label: 'PSPR3 (CPU3)', start: 0x40100000, end: 0x4010FFFF },
-  { id: 'DSPR4', label: 'DSPR4 (CPU4)', start: 0x30000000, end: 0x30017FFF },
-  { id: 'PSPR4', label: 'PSPR4 (CPU4)', start: 0x30100000, end: 0x3010FFFF },
-  { id: 'DSPR5', label: 'DSPR5 (CPU5)', start: 0x10000000, end: 0x10017FFF },
-  { id: 'PSPR5', label: 'PSPR5 (CPU5)', start: 0x10100000, end: 0x1010FFFF },
-  { id: 'PFLASH_C', label: 'PFLASH (cached)', start: 0x80000000, end: 0x81FFFFFF },
-  { id: 'PFLASH_NC', label: 'PFLASH (non-cached)', start: 0xA0000000, end: 0xA1FFFFFF },
-  { id: 'DFLASH', label: 'DFLASH (DF0/DF1)', start: 0xAF000000, end: 0xAFC1FFFF },
-  { id: 'BROM_C', label: 'BROM (cached)', start: 0x8FFF0000, end: 0x8FFFFFFF },
-  { id: 'BROM_NC', label: 'BROM (non-cached)', start: 0xAFFF0000, end: 0xAFFFFFFF },
-  { id: 'LMU_C', label: 'LMU (cached)', start: 0x90000000, end: 0x903FFFFF },
-  { id: 'LMU_NC', label: 'LMU (non-cached)', start: 0xB0000000, end: 0xB03FFFFF }
-];
 
 function isHexFilePath(filePath: string): boolean {
   const lower = filePath.toLowerCase();
@@ -125,10 +96,8 @@ function buildIntelHex(bytes: Map<number, number>): string {
   return lines.join('\n');
 }
 
-function toDumpRows(bytes: Map<number, number>, region: HexRegion | null): DumpRow[] {
-  const entries = [...bytes.keys()]
-    .filter(addr => !region || (addr >= region.start && addr <= region.end))
-    .sort((a, b) => a - b);
+function toDumpRows(bytes: Map<number, number>): DumpRow[] {
+  const entries = [...bytes.keys()].sort((a, b) => a - b);
 
   const rowBases = new Set<number>();
   for (const addr of entries) {
@@ -210,15 +179,6 @@ function getWebviewContent(rows: DumpRow[], title: string): string {
       font-weight: bold;
       white-space: nowrap;
     }
-    .region-badge {
-      padding: 2px 8px;
-      border: 1px solid var(--vscode-editorGroup-border);
-      border-radius: 10px;
-      font-size: 12px;
-      font-weight: bold;
-      color: var(--vscode-badge-foreground);
-      background: var(--vscode-badge-background);
-    }
     .goto {
       margin-left: auto;
       display: flex;
@@ -299,7 +259,6 @@ function getWebviewContent(rows: DumpRow[], title: string): string {
 <body>
   <div class="container">
     <div class="title-bar">
-      <div class="region-badge" id="region-badge">Region: -</div>
       <div class="goto">
         <input id="goto-input" placeholder="0x70010000" />
         <button id="goto-btn">Go</button>
@@ -313,27 +272,6 @@ function getWebviewContent(rows: DumpRow[], title: string): string {
   <script>
     const vscode = acquireVsCodeApi();
     const rows = ${rowsJson};
-    const regionRanges = [
-      { id: 'DSPR0', label: 'DSPR0 (CPU0)', start: 0x70000000, end: 0x7003BFFF },
-      { id: 'PSPR0', label: 'PSPR0 (CPU0)', start: 0x70100000, end: 0x7010FFFF },
-      { id: 'DSPR1', label: 'DSPR1 (CPU1)', start: 0x60000000, end: 0x6003BFFF },
-      { id: 'PSPR1', label: 'PSPR1 (CPU1)', start: 0x60100000, end: 0x6010FFFF },
-      { id: 'DSPR2', label: 'DSPR2 (CPU2)', start: 0x50000000, end: 0x50017FFF },
-      { id: 'PSPR2', label: 'PSPR2 (CPU2)', start: 0x50100000, end: 0x5010FFFF },
-      { id: 'DSPR3', label: 'DSPR3 (CPU3)', start: 0x40000000, end: 0x40017FFF },
-      { id: 'PSPR3', label: 'PSPR3 (CPU3)', start: 0x40100000, end: 0x4010FFFF },
-      { id: 'DSPR4', label: 'DSPR4 (CPU4)', start: 0x30000000, end: 0x30017FFF },
-      { id: 'PSPR4', label: 'PSPR4 (CPU4)', start: 0x30100000, end: 0x3010FFFF },
-      { id: 'DSPR5', label: 'DSPR5 (CPU5)', start: 0x10000000, end: 0x10017FFF },
-      { id: 'PSPR5', label: 'PSPR5 (CPU5)', start: 0x10100000, end: 0x1010FFFF },
-      { id: 'PFLASH_C', label: 'PFLASH (cached)', start: 0x80000000, end: 0x81FFFFFF },
-      { id: 'PFLASH_NC', label: 'PFLASH (non-cached)', start: 0xA0000000, end: 0xA1FFFFFF },
-      { id: 'DFLASH', label: 'DFLASH (DF0/DF1)', start: 0xAF000000, end: 0xAFC1FFFF },
-      { id: 'BROM_C', label: 'BROM (cached)', start: 0x8FFF0000, end: 0x8FFFFFFF },
-      { id: 'BROM_NC', label: 'BROM (non-cached)', start: 0xAFFF0000, end: 0xAFFFFFFF },
-      { id: 'LMU_C', label: 'LMU (cached)', start: 0x90000000, end: 0x903FFFFF },
-      { id: 'LMU_NC', label: 'LMU (non-cached)', start: 0xB0000000, end: 0xB03FFFFF }
-    ];
 
     function render(rowsData) {
       const tbody = document.getElementById('dump-body');
@@ -376,28 +314,6 @@ function getWebviewContent(rows: DumpRow[], title: string): string {
       }
     }
 
-    function findRegion(address) {
-      for (const region of regionRanges) {
-        if (address >= region.start && address <= region.end) return region.label;
-      }
-      return '-';
-    }
-
-    function updateRegionBadge() {
-      const badge = document.getElementById('region-badge');
-      const rows = document.querySelectorAll('tr[data-address]');
-      let topRow = null;
-      for (const row of rows) {
-        const rect = row.getBoundingClientRect();
-        if (rect.bottom > 0) {
-          topRow = row;
-          break;
-        }
-      }
-      if (!topRow) return;
-      const addr = parseInt(topRow.getAttribute('data-address'), 10);
-      badge.textContent = 'Region: ' + findRegion(addr);
-    }
 
     function handleEdit(event) {
       const input = event.target;
@@ -421,13 +337,10 @@ function getWebviewContent(rows: DumpRow[], title: string): string {
         row.scrollIntoView({ block: 'center' });
         row.classList.add('flash');
         setTimeout(() => row.classList.remove('flash'), 800);
-        updateRegionBadge();
       }
     }
 
     render(rows);
-    updateRegionBadge();
-    window.addEventListener('scroll', updateRegionBadge, { passive: true });
     document.getElementById('goto-btn').addEventListener('click', () => {
       const value = document.getElementById('goto-input').value;
       goToAddress(value);
@@ -442,7 +355,6 @@ function getWebviewContent(rows: DumpRow[], title: string): string {
       const message = event.data;
       if (message.type === 'update') {
         render(message.rows);
-        updateRegionBadge();
       }
       if (message.type === 'goToAddress') {
         goToAddress(message.address.toString(16));
@@ -474,7 +386,7 @@ class TaskingHexCustomEditor implements vscode.CustomTextEditorProvider {
 
     const updateWebview = () => {
       const bytes = parseIntelHex(document.getText());
-      const rows = toDumpRows(bytes, null);
+      const rows = toDumpRows(bytes);
       webviewPanel.webview.html = getWebviewContent(rows, document.fileName);
     };
 
@@ -484,7 +396,7 @@ class TaskingHexCustomEditor implements vscode.CustomTextEditorProvider {
       if (e.document.uri.toString() !== document.uri.toString()) return;
       if (this.applying) return;
       const bytes = parseIntelHex(document.getText());
-      const rows = toDumpRows(bytes, null);
+      const rows = toDumpRows(bytes);
       webviewPanel.webview.postMessage({ type: 'update', rows });
     });
 
@@ -526,7 +438,7 @@ class TaskingHexCustomEditor implements vscode.CustomTextEditorProvider {
       this.applying = false;
 
       const updatedBytes = parseIntelHex(document.getText());
-      const updatedRows = toDumpRows(updatedBytes, null);
+      const updatedRows = toDumpRows(updatedBytes);
       webviewPanel.webview.postMessage({ type: 'update', rows: updatedRows });
     });
   }

@@ -1,7 +1,7 @@
 {
-  "name": "tasking-hex-editor",
-  "displayName": "TASKING HEX Editor",
-  "description": "Intel HEX viewer/editor with T32-style dump view for TASKING/Infineon",
+  "name": "m-hex-dump-viewer",
+  "displayName": "M-HEX Dump Viewer",
+  "description": "Intel HEX viewer/editor with T32-style dump view",
   "publisher": "IH02",
   "version": "0.1.0",
   "engines": {
@@ -20,7 +20,7 @@
     "customEditors": [
       {
         "viewType": "taskingHex.dumpEditor",
-        "displayName": "TASKING HEX Dump",
+        "displayName": "M-HEX Dump",
         "priority": "default",
         "selector": [
           { "filenamePattern": "*.hex" },
