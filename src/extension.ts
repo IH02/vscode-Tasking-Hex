@@ -151,6 +151,17 @@ function getWebviewContent(rows: DumpRow[], title: string): string {
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
+    :root {
+      --titlebar-height: 32px;
+      --cell-padding-y: 2px;
+      --cell-padding-x: 4px;
+      --addr-color: #FF8C00;
+      --ascii-color: #00AA00;
+      --accent-color: var(--vscode-terminal-ansiYellow);
+    }
+    * {
+      box-sizing: border-box;
+    }
     body {
       font-family: Consolas, 'Courier New', monospace;
       font-size: 13px;
@@ -158,25 +169,27 @@ function getWebviewContent(rows: DumpRow[], title: string): string {
       padding: 0;
       background: var(--vscode-editor-background);
       color: var(--vscode-editor-foreground);
+      line-height: 1.35;
     }
     .container {
-      padding: 8px 12px 24px;
-      width: max-content;
+      padding: 6px 10px 18px;
+      width: 100%;
+      min-width: max-content;
     }
     .title-bar {
       display: flex;
       align-items: center;
-      gap: 12px;
-      margin-bottom: 0;
+      gap: 10px;
       position: sticky;
       top: 0;
       background: var(--vscode-editor-background);
       z-index: 3;
-      padding: 6px 0;
+      height: var(--titlebar-height);
+      padding: 0 0 4px;
       flex-wrap: wrap;
     }
     .title {
-      font-weight: bold;
+      font-weight: 600;
       white-space: nowrap;
     }
     .goto {
@@ -202,15 +215,6 @@ function getWebviewContent(rows: DumpRow[], title: string): string {
       color: var(--vscode-button-foreground);
       cursor: pointer;
     }
-    .header-line {
-      position: sticky;
-      top: 40px;
-      background: var(--vscode-editor-background);
-      z-index: 2;
-      padding: 2px 8px;
-      font-weight: bold;
-      white-space: pre;
-    }
     table {
       border-collapse: collapse;
       width: max-content;
@@ -218,23 +222,36 @@ function getWebviewContent(rows: DumpRow[], title: string): string {
       display: inline-table;
       margin-top: 0;
     }
+    thead th {
+      position: sticky;
+      top: var(--titlebar-height);
+      background: var(--vscode-editor-background);
+      z-index: 2;
+      padding: var(--cell-padding-y) var(--cell-padding-x);
+      font-weight: 600;
+      white-space: pre;
+      text-align: left;
+      border-bottom: 1px solid var(--vscode-editorGroup-border);
+    }
     tbody td {
-      padding: 2px 8px;
+      padding: var(--cell-padding-y) var(--cell-padding-x);
       white-space: pre;
     }
     tr.flash td {
-      background: rgba(255, 215, 0, 0.25);
+      background: color-mix(in srgb, var(--accent-color) 20%, transparent);
     }
+    th.address,
     td.address {
-      color: #FF8C00;
-      font-weight: bold;
+      color: var(--addr-color);
+      font-weight: 600;
       width: 10ch;
     }
+    th.word,
     td.word {
       width: 10ch;
     }
     td.word input {
-      width: 8ch;
+      width: 9ch;
       background: transparent;
       border: 1px solid transparent;
       color: var(--vscode-editor-foreground);
@@ -249,10 +266,10 @@ function getWebviewContent(rows: DumpRow[], title: string): string {
       background: var(--vscode-editor-selectionBackground);
     }
     td.ascii {
-      color: #00AA00;
-      font-weight: bold;
-      padding-left: 12px;
-      width: 16ch;
+      color: var(--ascii-color);
+      font-weight: 600;
+      padding-left: 10px;
+      width: 20ch;
     }
   </style>
 </head>
@@ -264,8 +281,17 @@ function getWebviewContent(rows: DumpRow[], title: string): string {
         <button id="goto-btn">Go</button>
       </div>
     </div>
-    <div class="header-line">ADDRESS         0        4        8        C        ASCII</div>
     <table>
+      <thead>
+        <tr>
+          <th class="address">ADDRESS</th>
+          <th class="word">0</th>
+          <th class="word">4</th>
+          <th class="word">8</th>
+          <th class="word">C</th>
+          <th class="ascii">ASCII</th>
+        </tr>
+      </thead>
       <tbody id="dump-body"></tbody>
     </table>
   </div>
@@ -392,16 +418,29 @@ class TaskingHexCustomEditor implements vscode.CustomTextEditorProvider {
 
     updateWebview();
 
+    let updateTimer: NodeJS.Timeout | undefined;
+    const scheduleUpdate = () => {
+      if (this.applying) return;
+      if (updateTimer) {
+        clearTimeout(updateTimer);
+      }
+      updateTimer = setTimeout(() => {
+        const bytes = parseIntelHex(document.getText());
+        const rows = toDumpRows(bytes);
+        webviewPanel.webview.postMessage({ type: 'update', rows });
+      }, 150);
+    };
+
     const changeDocSubscription = vscode.workspace.onDidChangeTextDocument(e => {
       if (e.document.uri.toString() !== document.uri.toString()) return;
-      if (this.applying) return;
-      const bytes = parseIntelHex(document.getText());
-      const rows = toDumpRows(bytes);
-      webviewPanel.webview.postMessage({ type: 'update', rows });
+      scheduleUpdate();
     });
 
     webviewPanel.onDidDispose(() => {
       changeDocSubscription.dispose();
+      if (updateTimer) {
+        clearTimeout(updateTimer);
+      }
       this.panels.delete(docKey);
       if (this.lastPanel === webviewPanel) {
         this.lastPanel = null;
